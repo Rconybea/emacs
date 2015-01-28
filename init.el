@@ -1,33 +1,48 @@
-; note: see also ~/Library/Application Support/Aquamacs Emacs/elpa
 ; note: on Roland-laptop-14,  used System Preferences|Keyboard|Modifier Keys to set capslock -> control
+
+;; ----- list of packages we will be requiring -----
+
+(defvar roland/packages '(autopair icicles yasnippet))
+
+;; ----- bootstrap package lists -----
+
+(message "rc: configuring package archives")
 
 (require 'package)
 (dolist (source '(("marmalade" . "http://marmalade-repo.org/packages/")
                   ("elpa" . "http://elpa.gnu.org/packages/")
-		  ;;("elpa" . "http://tromey.com/elpa/")
-		  ("melpa" . "http://melpa.milkbox.net/packages/")
-		  ))
+				  ;;("elpa" . "http://tromey.com/elpa/")
+				  ("melpa" . "http://melpa.milkbox.net/packages/")
+				  ))
   (add-to-list 'package-archives source t))
 (package-initialize)
 
 (when (not package-archive-contents)
   (package-refresh-contents))
-(defvar roland/packages '(autopair dismal icicles ecb))
+
+;; ----- install missing packages -----
+
+(message "rc: installing any missing packages from roland/packages")
+
 (dolist (p roland/packages)
   (when (not (package-installed-p p))
 	(package-install p)))
 
+;; ----- at this point all our packages should be installed ------
+
+;; ----- configure autopair -----
+
 (require 'autopair)
-(require 'icicles)
-(require 'key-chord)
-;;(require 'ecb)
-;;(require 'semantic)
-;;(require 'semantic/ia)
-;;(require 'semantic/bovine/gcc)
 (autopair-global-mode 1)
 (setq autopair-autowrap t)
 
-;; ----------------------------------------------------------------
+;; ----- configure icicles -----
+
+(require 'icicles)
+;; activate icicles (souped-up autocomplete)
+(icy-mode 1)
+
+;; ------ toggle between a file h/foo.hpp and src/foo.cpp -----
 
 (defun my-goto-h-file-knight ()
   "Toggle between header and sources files of the same name"
@@ -77,30 +92,31 @@
   )
 (global-set-key "\C-x\C-h" 'my-goto-h-file-knight)
 
-;; ----------------------------------------------------------------
+;; ----- start emacs server -----
 
 (server-start)
 
-;; ----------------------------------------------------------------
+;; ----- key bindings -----
+
+(message "rc: establish custom key bindings")
 
 ;; compilation..
 (global-set-key (kbd "C-c k") 'compile)
-;; highlighting..
-(global-set-key "\C-xXhh" 'hlt-highlight)
+
 ;; expand dynamic abbreviations
-;;(global-set-key (kbd "C-<return>") 'dabbrev-expand)
 (global-set-key (kbd "C-<return>") 'hippie-expand)
-(global-set-key (kbd "M-<return>") 'hippie-expand)
+(global-set-key (kbd "M-<return>") 'hippie-expand) ;; <--- preferred binding
 (global-set-key (kbd "A-<return>") 'hippie-expand)
-;;(local-set-key (kbd "C-;") 'hippie-expand)
-;;(global-unset-key (kbd "C-;")) 
-(global-set-key (kbd "C-;") 'hippie-expand)
+;; looks like C-; is supposed to toggle interpretation of option key in aquamacs
+;;(global-set-key (kbd "C-;") 'hippie-expand)
+
 ;; make C-x C-m equivalent to M-x
 (global-set-key "\C-x\C-m" 'execute-extended-command)
 ;; using this key-sequence instead of C-w..
 (global-set-key "\C-x\C-k" 'kill-region)
 ;; ..because we want to use C-w for backward-kill-word 
-;;(global-set-key "\C-w" 'backward-kill-word)
+(global-unset-key "\C-w")
+(global-set-key "\C-w" 'backward-kill-word)
 
 ;; same as ESC C-s
 (global-set-key "\M-s" 'isearch-forward-regexp)
@@ -110,7 +126,9 @@
 ;; use M-x qrr instead of M-x query-replace-regexp
 (defalias 'qrr 'query-replace-regexp)
 
-;; ----------------------------------------------------------------
+;; ----- grab some more screen real estate -----
+
+(message "rc: disable scroll bars / toolbar")
 
 ;; disable scrollbars, toolbars -- would rather have the screen real estate
 (if (fboundp 'scroll-bar-mode)
@@ -118,16 +136,23 @@
 (if (fboundp 'tool-bar-mode)
     (tool-bar-mode -1))
 ;; don't need to disable menubars on OSX,  since they don't consume pixels (being shared across programs)
+;; how do we recognize that we're running in aquamacs
 ;;(if (fboundp 'menu-bar-mode)
 ;;    (menu-bar-mode -1))
 
-;; ----------------------------------------------------------------
+;; ----- prevent help popping up in a new frame -----
+
+(message "rc: disable help creating new frames")
 
 ;; open *help* in current fram [this works if we're using 'one-buffer-one-frame-mode]
 ;; from www.emacswiki.org/emacs/AquamacsFAQ#toc1
 (setq obof-other-frame-regexps (remove "\\*Help\\*" obof-other-frame-regexps))
 (add-to-list 'obof-same-frame-regexps "\\*Help\\*")
 (add-to-list 'obof-same-frame-switching-regexps "\\*Help\\*")
+
+;; ----- customization for c++ programming -----
+
+(message "rc: setup custom variables for c++ programming")
 
 ;; substatement-open is the syntactic context when a substatement (e.g. body of if- or while-) 
 ;; begins with an opening brace
@@ -150,73 +175,18 @@
  '(tab-width 4)
  '(transient-mark-mode t))
 
-;; ----------------------------------------------------------------
-
-;;(require 'semantic-tag-folding)
-
-;; ----------------------------------------------------------------
-
-;; activate semantic mode [source code parsing]
-;;(semantic-mode 1)
-;; activate icicles (souped-up autocomplete)
-(icy-mode 1)
-
-;; ---------------- iswitchb ----------------
+;; ----- souped-up buffer switching -----
 
 (iswitchb-mode 1)
 ;;(iswitchb-default-keybindings)
 
-;; ----------------------------------------------------------------
+;; ----- yas snippets -----
 
-;; snippets are in ~/Library/Application Support/Aquamacs Emacs/elpa/yasnippet-20140909.1250/snippets/c++-mode/
-(setq yas-snippet-dirs "~/.emacs.d/snippets")
-
+;;(require 'yas-snippets)
 (yas-global-mode 1)
-;;(yas-reload-all)
 
-;; ----------------------------------------------------------------
+;; ----- compute line# and col# -----
 
 (global-linum-mode 1)
 (setq column-number-mode t)
-
-;; ----------------------------------------------------------------
-
-(key-chord-mode 1)
-
-;; idea is to take number-row shift-digit character combinations (e.g. % = shift+5),  
-;; and make them obtainable using combination of a key from the upper qwerty row with 
-;; the unshifted digit key
-(key-chord-define-global "`	" "~")
-(key-chord-define-global "`1" "!")
-(key-chord-define-global "1q" "!")
-(key-chord-define-global "2w" "@")
-(key-chord-define-global "3e" "#")
-(key-chord-define-global "4r" "$")
-(key-chord-define-global "5t" "%")
-(key-chord-define-global "6y" "^")
-(key-chord-define-global "6t" "^")
-(key-chord-define-global "7y" "&")
-(key-chord-define-global "8u" "*")
-(key-chord-define-global "9i" "(")
-(key-chord-define-global "9o" "(")
-(key-chord-define-global "o0" ")")
-(key-chord-define-global "0p" ")")
-(key-chord-define-global "-p" "_")
-(key-chord-define-global "-[" "{")
-(key-chord-define-global "=]" "}")
-
-(key-chord-define-global "xs" "\C-x\C-s")
-
-;; --------------------------------------------------------------
-
-;; (emacs-version)
-
-
-
-
-
-
-
-
-
 
